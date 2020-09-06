@@ -1,0 +1,7 @@
+dist: trusty
+sudo: required
+language: node_js
+node_js:
+  - "10"
+script:
+  - ./server.sh & truffle test

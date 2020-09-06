@@ -1,0 +1,31 @@
+{
+  "name": "link-token-maticnetwork",
+  "homepage": "https://github.com/smartcontractkit/link-token-maticnetwork",
+  "repository": "https://github.com/smartcontractkit/link-token-maticnetwork",
+  "version": "0.0.1",
+  "license": "MIT",
+  "authors": [
+    "Kristijan Rebernisak <kristijan.rebernisak@smartcontract.com>"
+  ],
+  "devDependencies": {
+    "bignumber.js": "^9.0.0",
+    "ganache-cli": "^6.10.1",
+    "moment": "^2.27.0",
+    "solc": "^0.7.1",
+    "truffle": "^5.1.43",
+    "web3": "^1.2.11"
+  },
+  "files": [
+    "README.md",
+    "contracts"
+  ],
+  "scripts": {
+    "migrate-ganache": "truffle migrate --network ganache",
+    "test": "truffle test",
+    "test-ganache": "truffle test --network ganache"
+  },
+  "dependencies": {
+    "link_token": "https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6",
+    "pos-portal": "https://github.com/maticnetwork/pos-portal#v1.1.0"
+  }
+}
