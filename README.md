@@ -2,7 +2,7 @@
 
 The LINK token is an [EIP20](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md) token with additional [ERC677](https://github.com/ethereum/EIPs/issues/677) functionality.
 
-The total supply of the token is 1,000,000,000, and each token is divisible up to 18 decimal places.
+The total supply of the token is 0 (at deployment), and each token is divisible up to 18 decimal places. Tokens are minted (deposited) and burned (withdrawn) by the [Matic PoS Portal](https://github.com/maticnetwork/pos-portal) operator/depositor.
 
 To prevent accidental burns, the token does not allow transfers to the contract itself and to 0x0.
 

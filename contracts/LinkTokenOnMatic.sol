@@ -14,13 +14,15 @@ contract LinkTokenOnMatic is
     NativeMetaTransaction,
     ContextMixin
 {
-    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
     string public constant ERC712_VERSION = "1";
+    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
     constructor(
         address childChainManager
     ) public LinkToken() {
+        // Burn all msg.sender tokens that are minted on LinkToken construction
+        _burn(msg.sender, balanceOf(msg.sender));
         _setupContractId("LinkTokenOnMatic");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(DEPOSITOR_ROLE, childChainManager);
