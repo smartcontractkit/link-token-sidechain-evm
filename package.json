@@ -25,6 +25,7 @@
     "test-ganache": "truffle test --network ganache"
   },
   "dependencies": {
+    "axios": "^0.20.0",
     "link_token": "https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6",
     "pos-portal": "https://github.com/maticnetwork/pos-portal#v1.1.0"
   }
