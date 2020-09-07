@@ -1945,7 +1945,7 @@ lcid@^2.0.0:
 
 "link_token@https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6":
   version "1.0.6"
-  resolved "https://github.com/smartcontractkit/LinkToken#b29a9d6a35800fac45a87129a783c3d00e978059"
+  resolved "https://github.com/smartcontractkit/LinkToken#a43e36354eaf5ae1fa91566f8db6e405c30354e4"
   dependencies:
     "@openzeppelin/contracts" "^3.1.0"
 

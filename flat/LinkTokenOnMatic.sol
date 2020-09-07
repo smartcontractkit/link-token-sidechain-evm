@@ -721,6 +721,47 @@ contract ERC20 is Context, IERC20 {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+// File: link_token/contracts/token/LinkERC20.sol
+
+pragma solidity ^0.6.0;
+
+
+abstract contract LinkERC20 is ERC20 {
+  /**
+   * @dev Atomically increases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   */
+  function increaseApproval(address spender, uint256 addedValue) public virtual returns (bool) {
+    return super.increaseAllowance(spender, addedValue);
+  }
+
+  /**
+   * @dev Atomically decreases the allowance granted to `spender` by the caller.
+   *
+   * This is an alternative to {approve} that can be used as a mitigation for
+   * problems described in {IERC20-approve}.
+   *
+   * Emits an {Approval} event indicating the updated allowance.
+   *
+   * Requirements:
+   *
+   * - `spender` cannot be the zero address.
+   * - `spender` must have allowance for the caller of at least
+   * `subtractedValue`.
+   */
+  function decreaseApproval(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    return super.decreaseAllowance(spender, subtractedValue);
+  }
+}
+
 // File: link_token/contracts/token/ERC677.sol
 
 pragma solidity ^0.6.0;
@@ -749,11 +790,11 @@ pragma solidity ^0.6.0;
 abstract contract ERC677Token is ERC20, ERC677 {
 
   /**
-  * @dev transfer token to a contract address with additional data if the recipient is a contact.
-  * @param _to The address to transfer to.
-  * @param _value The amount to be transferred.
-  * @param _data The extra data to be passed to the receiving contract.
-  */
+   * @dev transfer token to a contract address with additional data if the recipient is a contact.
+   * @param _to The address to transfer to.
+   * @param _value The amount to be transferred.
+   * @param _data The extra data to be passed to the receiving contract.
+   */
   function transferAndCall(address _to, uint _value, bytes memory _data)
     public
     override
@@ -795,7 +836,8 @@ pragma solidity ^0.6.0;
 
 
 
-contract LinkToken is ERC20, ERC677Token {
+
+contract LinkToken is ERC20, LinkERC20, ERC677Token {
 
   uint private constant TOTAL_SUPPLY = 10**27;
   string private constant NAME = 'ChainLink Token';
@@ -804,15 +846,27 @@ contract LinkToken is ERC20, ERC677Token {
   constructor() ERC20(NAME, SYMBOL)
     public
   {
+    _onCreate();
+  }
+
+  /**
+   * @dev Hook that is called when this contract is created.
+   * Useful to override constructor behaviour in child contracts (e.g., LINK bridge tokens).
+   * @notice Default implementation mints 10**27 tokens to msg.sender
+   */
+  function _onCreate()
+    internal
+    virtual
+  {
     _mint(msg.sender, TOTAL_SUPPLY);
   }
 
   /**
-  * @dev transfer token to a specified address with additional data if the recipient is a contract.
-  * @param _to The address to transfer to.
-  * @param _value The amount to be transferred.
-  * @param _data The extra data to be passed to the receiving contract.
-  */
+   * @dev transfer token to a specified address with additional data if the recipient is a contract.
+   * @param _to The address to transfer to.
+   * @param _value The amount to be transferred.
+   * @param _data The extra data to be passed to the receiving contract.
+   */
   function transferAndCall(address _to, uint _value, bytes memory _data)
     public
     override
@@ -823,10 +877,10 @@ contract LinkToken is ERC20, ERC677Token {
   }
 
   /**
-  * @dev transfer token to a specified address.
-  * @param _to The address to transfer to.
-  * @param _value The amount to be transferred.
-  */
+   * @dev transfer token to a specified address.
+   * @param _to The address to transfer to.
+   * @param _value The amount to be transferred.
+   */
   function transfer(address _to, uint _value)
     public
     override
@@ -851,48 +905,6 @@ contract LinkToken is ERC20, ERC677Token {
   }
 
   /**
-   * @dev Atomically increases the allowance granted to `spender` by the caller.
-   *
-   * This is an alternative to {approve} that can be used as a mitigation for
-   * problems described in {IERC20-approve}.
-   *
-   * Emits an {Approval} event indicating the updated allowance.
-   *
-   * Requirements:
-   *
-   * - `spender` cannot be the zero address.
-   */
-  function increaseApproval(address spender, uint256 addedValue)
-    public
-    virtual
-    returns (bool)
-  {
-      return super.increaseAllowance(spender, addedValue);
-  }
-
-  /**
-   * @dev Atomically decreases the allowance granted to `spender` by the caller.
-   *
-   * This is an alternative to {approve} that can be used as a mitigation for
-   * problems described in {IERC20-approve}.
-   *
-   * Emits an {Approval} event indicating the updated allowance.
-   *
-   * Requirements:
-   *
-   * - `spender` cannot be the zero address.
-   * - `spender` must have allowance for the caller of at least
-   * `subtractedValue`.
-   */
-  function decreaseApproval(address spender, uint256 subtractedValue)
-    public
-    virtual
-    returns (bool)
-  {
-      return super.decreaseAllowance(spender, subtractedValue);
-  }
-
-  /**
    * @dev Transfer tokens from one address to another
    * @param _from address The address which you want to send tokens from
    * @param _to address The address which you want to transfer to
@@ -914,7 +926,6 @@ contract LinkToken is ERC20, ERC677Token {
     require(_recipient != address(0) && _recipient != address(this));
     _;
   }
-
 }
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
@@ -1642,61 +1653,65 @@ pragma solidity ^0.6.0;
 
 
 
-
 contract LinkTokenOnMatic is
-    LinkToken,
-    IChildToken,
-    AccessControlMixin,
-    NativeMetaTransaction,
-    ContextMixin
+  LinkToken,
+  IChildToken,
+  AccessControlMixin,
+  NativeMetaTransaction,
+  ContextMixin
 {
 
-    string public constant ERC712_VERSION = "1";
-    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+  string public constant ERC712_VERSION = "1";
+  bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
-    constructor(
-        address childChainManager
-    ) public LinkToken() {
-        // Burn all msg.sender tokens that are minted on LinkToken construction
-        _burn(msg.sender, balanceOf(msg.sender));
-        _setupContractId("LinkTokenOnMatic");
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(DEPOSITOR_ROLE, childChainManager);
-        _initializeEIP712(name(), ERC712_VERSION);
-    }
+  constructor(
+    address childChainManager
+  ) public LinkToken() {
+    _setupContractId("LinkTokenOnMatic");
+    _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    _setupRole(DEPOSITOR_ROLE, childChainManager);
+    _initializeEIP712(name(), ERC712_VERSION);
+  }
 
-    function _msgSender()
-        internal
-        override
-        view
-        returns (address payable sender)
-    {
-        return ContextMixin.msgSender();
-    }
+  function _onCreate()
+    internal
+    override
+  {
+    // Do not mint any tokens
+  }
 
-    /**
-     * @notice called when token is deposited on root chain
-     * @dev Should be callable only by ChildChainManager
-     * Should handle deposit by minting the required amount for user
-     * Make sure minting is done only by this function
-     * @param user user address for whom deposit is being done
-     * @param depositData abi encoded amount
-     */
-    function deposit(address user, bytes calldata depositData)
-        external
-        override
-        only(DEPOSITOR_ROLE)
-    {
-        uint256 amount = abi.decode(depositData, (uint256));
-        _mint(user, amount);
-    }
+  function _msgSender()
+    internal
+    override
+    view
+    returns (address payable sender)
+  {
+    return ContextMixin.msgSender();
+  }
 
-    /**
-     * @notice called when user wants to withdraw tokens back to root chain
-     * @dev Should burn user's tokens. This transaction will be verified when exiting on root chain
-     * @param amount amount of tokens to withdraw
-     */
-    function withdraw(uint256 amount) external {
-        _burn(_msgSender(), amount);
-    }
+  /**
+   * @notice called when token is deposited on root chain
+   * @dev Should be callable only by ChildChainManager
+   * Should handle deposit by minting the required amount for user
+   * Make sure minting is done only by this function
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  function deposit(address user, bytes calldata depositData)
+    external
+    override
+    only(DEPOSITOR_ROLE)
+  {
+    uint256 amount = abi.decode(depositData, (uint256));
+    _mint(user, amount);
+  }
+
+  /**
+   * @notice called when user wants to withdraw tokens back to root chain
+   * @dev Should burn user's tokens. This transaction will be verified when exiting on root chain
+   * @param amount amount of tokens to withdraw
+   */
+  function withdraw(uint256 amount) external {
+    _burn(_msgSender(), amount);
+  }
 }
