@@ -14,7 +14,7 @@
     "ganache-cli": "^6.10.1",
     "moment": "^2.27.0",
     "solc": "^0.7.1",
-    "truffle": "^5.1.43",
+    "truffle": "^5.1.32",
     "web3": "^1.2.11"
   },
   "files": [
@@ -22,9 +22,7 @@
     "contracts"
   ],
   "scripts": {
-    "migrate-ganache": "truffle migrate --network ganache",
-    "test": "truffle test",
-    "test-ganache": "truffle test --network ganache"
+    "test": "truffle test"
   },
   "dependencies": {
     "axios": "^0.20.0",
