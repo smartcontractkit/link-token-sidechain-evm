@@ -10,7 +10,11 @@ To prevent accidental burns, the token does not allow transfers to the contract 
 
 ## Details
 
-- Address: TODO!
+- Addresses:
+  - Ethereum Goerli root: [`0x326c977e6efc84e512bb9c30f76e30c160ed06fb`](https://goerli.etherscan.io/address/0x326c977e6efc84e512bb9c30f76e30c160ed06fb)
+  - Matic Mumbai child: [`0xf2CD2Bf4a4427dEb2Bc5640697E35b503912316C`](https://mumbai-explorer.matic.today/address/0xf2CD2Bf4a4427dEb2Bc5640697E35b503912316C)
+  - Ethereum Mainnet root: [`0x514910771af9ca656af840dff83e8264ecf986ca`](https://etherscan.io/token/0x514910771af9ca656af840dff83e8264ecf986ca)
+  - Matic Mainnet child: `TODO!`
 - Decimals: 18
 - Name: ChainLink Token
 - Symbol: LINK
