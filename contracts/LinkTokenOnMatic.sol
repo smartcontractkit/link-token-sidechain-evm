@@ -13,7 +13,6 @@ contract LinkTokenOnMatic is
   NativeMetaTransaction,
   ContextMixin
 {
-
   string public constant ERC712_VERSION = "1";
   bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
@@ -64,7 +63,9 @@ contract LinkTokenOnMatic is
    * @dev Should burn user's tokens. This transaction will be verified when exiting on root chain
    * @param amount amount of tokens to withdraw
    */
-  function withdraw(uint256 amount) external {
+  function withdraw(uint256 amount)
+    external
+  {
     _burn(_msgSender(), amount);
   }
 }
