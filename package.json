@@ -1,14 +1,15 @@
 {
-  "name": "link-token-maticnetwork",
-  "homepage": "https://github.com/smartcontractkit/link-token-maticnetwork",
-  "repository": "https://github.com/smartcontractkit/link-token-maticnetwork",
+  "name": "link-token-sidechain-evm",
+  "homepage": "https://github.com/smartcontractkit/link-token-sidechain-evm",
+  "repository": "https://github.com/smartcontractkit/link-token-sidechain-evm",
   "version": "0.0.1",
   "license": "MIT",
   "authors": [
-    "Kristijan Rebernisak <kristijan.rebernisak@smartcontract.com>"
+    "Kristijan Rebernisak <kristijan@smartcontract.com>"
   ],
   "devDependencies": {
     "@truffle/hdwallet-provider": "^1.0.43",
+    "axios": "^0.20.0",
     "bignumber.js": "^9.0.0",
     "eth-gas-reporter": "^0.2.17",
     "ganache-cli": "^6.10.1",
@@ -22,11 +23,10 @@
     "contracts"
   ],
   "scripts": {
+    "migrate:development": "truffle migrate --network development",
     "test": "truffle test"
   },
   "dependencies": {
-    "axios": "^0.20.0",
-    "link_token": "https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6",
-    "pos-portal": "https://github.com/maticnetwork/pos-portal#v1.1.0"
+    "link_token": "https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6"
   }
 }

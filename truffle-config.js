@@ -18,44 +18,28 @@ module.exports = {
       skipDryRun: true,
       gas: 7000000,
     },
-    root: {
-      host: 'localhost',
-      port: 8545,
-      network_id: '*', // match any network
-      skipDryRun: true,
-      gas: 7000000,
-      gasPrice: '0',
-    },
-    child: {
-      host: 'localhost',
-      port: 8545,
-      network_id: '*', // match any network
-      skipDryRun: true,
-      gas: 7000000,
-      gasPrice: '0',
-    },
-    mumbaiRoot: {
+    goerli: {
       provider: () => walletProvider(`https://goerli.infura.io/v3/${INFURA_API_KEY}`),
       network_id: 5,
       gas: 7000000,
       gasPrice: 10000000000, // 10 gwei
       skipDryRun: true,
     },
-    mumbaiChild: {
-      provider: () => new HDWalletProvider(MNEMONIC, 'https://rpc-mumbai.matic.today'),
+    maticDevelopment: {
+      host: 'localhost',
+      port: 8545,
+      network_id: '*', // match any network
+      skipDryRun: true,
+      gas: 7000000,
+    },
+    maticMumbai: {
+      provider: () => walletProvider('https://rpc-mumbai.matic.today'),
       network_id: 80001,
       gas: 7000000,
       gasPrice: 10000000000, // 10 gwei
       skipDryRun: true,
     },
-    mainnetRoot: {
-      provider: () => walletProvider(`https://mainnet.infura.io/v3/${INFURA_API_KEY}`),
-      network_id: 1,
-      gas: 7000000,
-      gasPrice: 10000000000, // 10 gwei
-      skipDryRun: true,
-    },
-    mainnetChild: {
+    maticMainnet: {
       provider: () => walletProvider('https://rpc-mainnet.matic.network'),
       network_id: 137,
       gas: 7000000,
@@ -91,7 +75,7 @@ module.exports = {
   },
 
   verify: {
-    preamble: 'LINK on Matic Network\nVersion: 0.0.1',
+    preamble: 'LINK\nVersion: 0.0.1',
   },
 
   api_keys: {

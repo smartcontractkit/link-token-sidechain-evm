@@ -2015,7 +2015,7 @@ functional-red-black-tree@^1.0.1:
   resolved "https://registry.yarnpkg.com/functional-red-black-tree/-/functional-red-black-tree-1.0.1.tgz#1b0ab3bd553b2a0d6399d29c0e3ea0b252078327"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
 
-ganache-cli@^6.10.1, ganache-cli@^6.9.1:
+ganache-cli@^6.10.1:
   version "6.10.1"
   resolved "https://registry.yarnpkg.com/ganache-cli/-/ganache-cli-6.10.1.tgz#6e083a92dba204d649c43d8823152bb9e2219807"
   integrity sha512-3lpBxILtJBxkNVo+U8ad2qbkzB6nZ53gXhXH6NiS0Pauqur86rGbhXz6fNASjBosZm9iJ8Nr71fJd331QODFkQ==
@@ -2731,11 +2731,10 @@ levelup@^1.2.1:
     xtend "~4.0.0"
 
 "link_token@https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6":
-  version "1.0.6"
-  resolved "https://github.com/smartcontractkit/LinkToken#528ad8967d76b99980a4f53ef25fbdae2b33a3e9"
+  version "1.1.0"
+  resolved "https://github.com/smartcontractkit/LinkToken#9b145d33ac229f8cccd17caa7bfa7558fb173085"
   dependencies:
     "@openzeppelin/contracts" "^3.1.0"
-    "@truffle/hdwallet-provider" "^1.0.43"
 
 locate-path@^3.0.0:
   version "3.0.0"
@@ -3409,12 +3408,6 @@ pify@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-3.0.0.tgz#e5a4acd2c101fdf3d9a4d07f0dbc4db49dd28176"
   integrity sha1-5aSs0sEB/fPZpNB/DbxNtJ3SgXY=
-
-"pos-portal@https://github.com/maticnetwork/pos-portal#v1.1.0":
-  version "1.1.0"
-  resolved "https://github.com/maticnetwork/pos-portal#71d7f846279be7c23e3356bf2a293d534ab8ed46"
-  dependencies:
-    ganache-cli "^6.9.1"
 
 precond@0.2:
   version "0.2.3"
