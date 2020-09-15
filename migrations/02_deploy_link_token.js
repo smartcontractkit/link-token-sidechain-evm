@@ -1,5 +1,7 @@
 const axios = require('axios')
 const LinkToken = artifacts.require('ChildLinkToken')
+const { MockV3Aggregator } = require('@chainlink/contracts/truffle/v0.6/MockV3Aggregator')
+MockV3Aggregator.setProvider(web3.currentProvider)
 
 const MATIC_NETWORK_TESTNET_MUMBAI = 'testnet/mumbai'
 const MATIC_NETWORK_MAINNET_V1 = 'mainnet/v1'
@@ -33,8 +35,33 @@ const getManager = async (network) => {
   }
 }
 
+// Preconfigured Proof of Reserve feeds for different sidechain networks
+const getProofOfReservesFeed = async (network) => {
+  switch (network) {
+    default:
+      throw Error(`Proof of Reserves feed not configured for network: ${network}`)
+  }
+}
+
+const getMockedProofOfReservesFeed = async (deployer, accounts) => {
+  if (!process.env.MOCK_PROOF_OF_RESERVES_FEED) return ''
+
+  const decimals = 0
+  const amount = parseInt(process.env.MOCK_PROOF_OF_RESERVES_FEED)
+  const options = { from: accounts[0] }
+  const instance = await deployer.deploy(MockV3Aggregator, decimals, amount, options)
+  return instance.address
+}
+
 module.exports = async (deployer, network, accounts) => {
   const childChainManager = process.env.CHILD_CHAIN_MANAGER || (await getManager(network))
+  const proofOfReservesFeedAddr =
+    process.env.PROOF_OF_RESERVES_FEED ||
+    (await getMockedProofOfReservesFeed(deployer, accounts)) ||
+    (await getProofOfReservesFeed(network))
+
   console.log(`Setting 'childChainManager': ${childChainManager}`)
-  await deployer.deploy(LinkToken, childChainManager)
+  console.log(`Setting 'proofOfReservesFeedAddr': ${proofOfReservesFeedAddr}`)
+  const options = { from: accounts[0] }
+  await deployer.deploy(LinkToken, childChainManager, proofOfReservesFeedAddr, options)
 }
