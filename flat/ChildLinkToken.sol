@@ -1,4 +1,40 @@
 
+// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
+
+pragma solidity >=0.6.0;
+
+interface AggregatorV3Interface {
+
+  function decimals() external view returns (uint8);
+  function description() external view returns (string memory);
+  function version() external view returns (uint256);
+
+  // getRoundData and latestRoundData should both raise "No data present"
+  // if they do not have data to report, instead of returning unset values
+  // which could be misinterpreted as actual reported values.
+  function getRoundData(uint80 _roundId)
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+  function latestRoundData()
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+
+}
+
 // File: @openzeppelin/contracts/GSN/Context.sol
 
 // SPDX-License-Identifier: MIT
@@ -766,6 +802,7 @@ abstract contract LinkERC20 is ERC20 {
 
 pragma solidity ^0.6.0;
 
+
 abstract contract ERC677 is IERC20 {
   function transferAndCall(address to, uint value, bytes memory data) public virtual returns (bool success);
 
@@ -835,8 +872,7 @@ pragma solidity ^0.6.0;
 
 
 
-
-contract LinkToken is ERC20, LinkERC20, ERC677Token {
+contract LinkToken is LinkERC20, ERC677Token {
   uint private constant TOTAL_SUPPLY = 10**27;
   string private constant NAME = 'ChainLink Token';
   string private constant SYMBOL = 'LINK';
@@ -908,7 +944,7 @@ contract LinkToken is ERC20, LinkERC20, ERC677Token {
   // MODIFIERS
 
   modifier validAddress(address _recipient) {
-    require(_recipient != address(this), "LinkToken: transfer to this contract address");
+    require(_recipient != address(this), "LinkToken: transfer/approve to this contract address");
     _;
   }
 }
@@ -1413,19 +1449,45 @@ pragma solidity ^0.6.0;
 
 
 
+
 contract ChildLinkToken is
   LinkToken,
   IChildToken,
   AccessControlMixin
 {
   bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+  AggregatorV3Interface public proofOfReservesFeed;
 
   constructor(
-    address childChainManager
+    address childChainManager,
+    address proofOfReservesFeedAddr
   ) public LinkToken() {
     _setupContractId("ChildLinkToken");
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     _setupRole(DEPOSITOR_ROLE, childChainManager);
+    // Set the Proof of Reserves feed contract
+    proofOfReservesFeed = AggregatorV3Interface(proofOfReservesFeedAddr);
+  }
+
+  /**
+   * @dev Throws if called with amout that would make the child token undercollateralized.
+   * @param depositData abi encoded amount
+   */
+  modifier onlyWithProof(bytes memory depositData) {
+    (
+      /* uint80 roundId */,
+      int256 answer,
+      /* uint256 startedAt */,
+      /* uint256 updatedAt */,
+      /* uint80 answeredInRound */
+    ) = proofOfReservesFeed.latestRoundData();
+
+    uint256 amount = abi.decode(depositData, (uint256));
+    require(
+      totalSupply().add(amount) <= uint(answer),
+      "ChildLinkToken: insufficient reserves"
+    );
+    _;
   }
 
   function _onCreate()
@@ -1447,6 +1509,7 @@ contract ChildLinkToken is
     external
     override
     only(DEPOSITOR_ROLE)
+    onlyWithProof(depositData)
   {
     uint256 amount = abi.decode(depositData, (uint256));
     _mint(user, amount);

@@ -28,6 +28,6 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.0.10",
-    "link_token": "https://github.com/smartcontractkit/LinkToken#feature/solc-v0.6"
+    "link_token": "https://github.com/smartcontractkit/LinkToken"
   }
 }

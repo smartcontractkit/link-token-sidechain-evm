@@ -24,4 +24,5 @@ install:
   - yarn install
 
 script:
-  - ganache-cli --quiet -l 8000000 & yarn test --network maticDevelopment
+  - ganache-cli --quiet -l 8000000 > /dev/null &
+  - yarn test --network maticDevelopment
