@@ -1,40 +1,4 @@
 
-// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
-
-pragma solidity >=0.6.0;
-
-interface AggregatorV3Interface {
-
-  function decimals() external view returns (uint8);
-  function description() external view returns (string memory);
-  function version() external view returns (uint256);
-
-  // getRoundData and latestRoundData should both raise "No data present"
-  // if they do not have data to report, instead of returning unset values
-  // which could be misinterpreted as actual reported values.
-  function getRoundData(uint80 _roundId)
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-  function latestRoundData()
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-
-}
-
 // File: @openzeppelin/contracts/GSN/Context.sol
 
 // SPDX-License-Identifier: MIT
@@ -949,6 +913,42 @@ contract LinkToken is LinkERC20, ERC677Token {
   }
 }
 
+// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
+
+pragma solidity >=0.6.0;
+
+interface AggregatorV3Interface {
+
+  function decimals() external view returns (uint8);
+  function description() external view returns (string memory);
+  function version() external view returns (uint256);
+
+  // getRoundData and latestRoundData should both raise "No data present"
+  // if they do not have data to report, instead of returning unset values
+  // which could be misinterpreted as actual reported values.
+  function getRoundData(uint80 _roundId)
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+  function latestRoundData()
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+
+}
+
 // File: contracts/interfaces/IChildToken.sol
 
 pragma solidity ^0.6.0;
@@ -1524,5 +1524,91 @@ contract ChildLinkToken is
     external
   {
     _burn(_msgSender(), amount);
+  }
+}
+
+// File: contracts/custom/bsc/BEP20.sol
+
+pragma solidity ^0.6.0;
+
+
+abstract contract BEP20 is ERC20 {
+
+  /**
+   * @dev Returns the bep token owner.
+   */
+  function getOwner() virtual external view returns (address);
+}
+
+// File: contracts/custom/bsc/LinkTokenBEP20.sol
+
+pragma solidity ^0.6.0;
+
+
+
+
+
+contract LinkTokenBEP20 is BEP20, ChildLinkToken {
+
+  constructor(
+    address childChainManager,
+    address proofOfReservesFeedAddr
+  )
+    public
+    ChildLinkToken(childChainManager, proofOfReservesFeedAddr) 
+  {
+    // noop
+  }
+
+  /**
+   * @dev Returns the bep token owner.
+   */
+  function getOwner() override external view returns (address) {
+    return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
+  }
+
+  /**
+   * @dev Moves tokens `amount` from `sender` to `recipient`.
+   *
+   * This is internal function is equivalent to {transfer}, and can be used to
+   * e.g. implement automatic token fees, slashing mechanisms, etc.
+   *
+   * Emits a {Transfer} event.
+   *
+   * Requirements:
+   *
+   * - `sender` cannot be the zero address.
+   * - `recipient` cannot be the zero address.
+   * - `sender` must have a balance of at least `amount`.
+   */
+  function _transfer(address sender, address recipient, uint256 amount)
+    internal
+    override(ERC20, LinkToken)
+    virtual
+    validAddress(recipient)
+  {
+    LinkToken._transfer(sender, recipient, amount);
+  }
+
+  /**
+   * @dev Sets `amount` as the allowance of `spender` over the `owner`s tokens.
+   *
+   * This is internal function is equivalent to `approve`, and can be used to
+   * e.g. set automatic allowances for certain subsystems, etc.
+   *
+   * Emits an {Approval} event.
+   *
+   * Requirements:
+   *
+   * - `owner` cannot be the zero address.
+   * - `spender` cannot be the zero address.
+   */
+  function _approve(address owner, address spender, uint256 amount)
+    internal
+    override(ERC20, LinkToken)
+    virtual
+    validAddress(spender)
+  {
+    LinkToken._approve(owner, spender, amount);
   }
 }

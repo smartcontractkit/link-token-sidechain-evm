@@ -2,7 +2,7 @@ pragma solidity ^0.6.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import {LinkToken} from "link_token/contracts/v0.6/LinkToken.sol";
-import {IChildToken} from "./child/IChildToken.sol";
+import {IChildToken} from "./interfaces/IChildToken.sol";
 import {AccessControlMixin} from "./access/AccessControlMixin.sol";
 
 contract ChildLinkToken is
