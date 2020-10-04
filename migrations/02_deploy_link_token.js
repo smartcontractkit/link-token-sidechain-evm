@@ -1,5 +1,5 @@
 const axios = require('axios')
-const LinkToken = artifacts.require('ChildLinkToken')
+const LinkToken = artifacts.require('LinkChildToken')
 const { MockV3Aggregator } = require('@chainlink/contracts/truffle/v0.6/MockV3Aggregator')
 MockV3Aggregator.setProvider(web3.currentProvider)
 
