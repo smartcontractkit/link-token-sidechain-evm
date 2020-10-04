@@ -8,12 +8,6 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
 
   mapping (address => bytes) private _failedDeposits;
 
-  constructor(
-    address childChainManager
-  ) public ChildERC20(childChainManager) {
-    _setupContractId("ChildERC20Recoverable");
-  }
-
   /**
    * @dev Throws if this deposit is not allowed.
    * @param user user address for whom deposit is being done
@@ -94,5 +88,12 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
    * @param user user address for whom deposit is being done
    * @param depositData abi encoded amount
    */
-  function _isDepositAllowed(address user, bytes memory depositData) internal virtual returns (bool, string memory) { }
+  function _isDepositAllowed(address user, bytes memory depositData)
+    internal
+    virtual
+    returns
+    (bool, string memory)
+  {
+    // Extend for custom conditions
+  }
 }

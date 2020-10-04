@@ -913,42 +913,6 @@ contract LinkToken is LinkERC20, ERC677Token {
   }
 }
 
-// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
-
-pragma solidity >=0.6.0;
-
-interface AggregatorV3Interface {
-
-  function decimals() external view returns (uint8);
-  function description() external view returns (string memory);
-  function version() external view returns (uint256);
-
-  // getRoundData and latestRoundData should both raise "No data present"
-  // if they do not have data to report, instead of returning unset values
-  // which could be misinterpreted as actual reported values.
-  function getRoundData(uint80 _roundId)
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-  function latestRoundData()
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-
-}
-
 // File: contracts/interfaces/IChildERC20.sol
 
 pragma solidity ^0.6.0;
@@ -956,21 +920,6 @@ pragma solidity ^0.6.0;
 interface IChildERC20 {
   function deposit(address user, bytes calldata depositData) external;
   function withdraw(uint256 amount) external;
-}
-
-// File: contracts/interfaces/IChildERC20Recoverable.sol
-
-pragma solidity ^0.6.0;
-
-
-interface IChildERC20Recoverable is IChildERC20 {
-  function redeposit(address user) external;
-  function withdrawFailedDeposit(uint256 amount) external;
-
-  /**
-   * @dev Emitted when token deposit is not allowed.
-   */
-  event FailedDeposit(address indexed user, bytes depositData, string indexed message);
 }
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
@@ -1510,6 +1459,21 @@ abstract contract ChildERC20 is
   }
 }
 
+// File: contracts/interfaces/IChildERC20Recoverable.sol
+
+pragma solidity ^0.6.0;
+
+
+interface IChildERC20Recoverable is IChildERC20 {
+  function redeposit(address user) external;
+  function withdrawFailedDeposit(uint256 amount) external;
+
+  /**
+   * @dev Emitted when token deposit is not allowed.
+   */
+  event FailedDeposit(address indexed user, bytes depositData, string indexed message);
+}
+
 // File: contracts/child/ChildERC20Recoverable.sol
 
 pragma solidity ^0.6.0;
@@ -1520,12 +1484,6 @@ pragma solidity ^0.6.0;
 abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
 
   mapping (address => bytes) private _failedDeposits;
-
-  constructor(
-    address childChainManager
-  ) public ChildERC20(childChainManager) {
-    _setupContractId("ChildERC20Recoverable");
-  }
 
   /**
    * @dev Throws if this deposit is not allowed.
@@ -1607,24 +1565,107 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
    * @param user user address for whom deposit is being done
    * @param depositData abi encoded amount
    */
-  function _isDepositAllowed(address user, bytes memory depositData) internal virtual returns (bool, string memory) { }
+  function _isDepositAllowed(address user, bytes memory depositData)
+    internal
+    virtual
+    returns
+    (bool, string memory)
+  {
+    // Extend for custom conditions
+  }
 }
 
-// File: contracts/child/ChildERC20CollateralLimited.sol
+// File: contracts/child/ChildERC20Capped.sol
 
 pragma solidity ^0.6.0;
 
 
 
-abstract contract ChildERC20CollateralLimited is ChildERC20Recoverable {
+abstract contract ChildERC20Capped is ChildERC20Recoverable {
+  // TODO: role to update _cap
+  uint256 private _cap;
+
+  /**
+   * @dev Sets the value of the `cap`. This value is immutable, it can only be
+   * set once during construction.
+   */
+  constructor (uint256 cap) public {
+      require(cap > 0, "ChildERC20Capped: cap is 0");
+      _cap = cap;
+  }
+
+  /**
+   * @dev Returns the cap on the token's total supply.
+   */
+  function cap() public view returns (uint256) {
+      return _cap;
+  }
+
+  /**
+   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   *
+   * @param depositData abi encoded amount
+   */
+  function _isDepositAllowed(address /* user */, bytes memory depositData)
+    internal
+    override
+    virtual
+    returns (bool, string memory)
+  {
+    uint256 amount = abi.decode(depositData, (uint256));
+    bool allowed = totalSupply().add(amount) <= _cap;
+    string memory message = allowed ? "" : "ChildERC20Capped: cap exceeded";
+    return (allowed, message);
+  }
+}
+
+// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
+
+pragma solidity >=0.6.0;
+
+interface AggregatorV3Interface {
+
+  function decimals() external view returns (uint8);
+  function description() external view returns (string memory);
+  function version() external view returns (uint256);
+
+  // getRoundData and latestRoundData should both raise "No data present"
+  // if they do not have data to report, instead of returning unset values
+  // which could be misinterpreted as actual reported values.
+  function getRoundData(uint80 _roundId)
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+  function latestRoundData()
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+
+}
+
+// File: contracts/child/ChildERC20Collateralized.sol
+
+pragma solidity ^0.6.0;
+
+
+
+abstract contract ChildERC20Collateralized is ChildERC20Recoverable {
 
   AggregatorV3Interface public proofOfReservesFeed;
 
-  constructor(
-    address childChainManager,
-    address proofOfReservesFeedAddr
-  ) public ChildERC20Recoverable(childChainManager) {
-    _setupContractId("ChildERC20CollateralLimited");
+  constructor(address proofOfReservesFeedAddr) public {
     // Set the Proof of Reserves feed contract
     proofOfReservesFeed = AggregatorV3Interface(proofOfReservesFeedAddr);
   }
@@ -1634,7 +1675,12 @@ abstract contract ChildERC20CollateralLimited is ChildERC20Recoverable {
    *
    * @param depositData abi encoded amount
    */
-  function _isDepositAllowed(address /* user */, bytes memory depositData) internal override virtual returns (bool, string memory) {
+  function _isDepositAllowed(address /* user */, bytes memory depositData)
+    internal
+    override
+    virtual
+    returns (bool, string memory)
+  {
     (
       /* uint80 roundId */,
       int256 answer,
@@ -1645,28 +1691,37 @@ abstract contract ChildERC20CollateralLimited is ChildERC20Recoverable {
 
     uint256 amount = abi.decode(depositData, (uint256));
     bool allowed = totalSupply().add(amount) <= uint256(answer);
-    string memory message = allowed ? "" : "ChildERC20CollateralLimited: insufficient reserves";
+    string memory message = allowed ? "" : "ChildERC20Collateralized: insufficient reserves";
     return (allowed, message);
   }
 }
 
-// File: contracts/LinkChildToken.sol
+// File: contracts/LinkTokenChild.sol
 
 pragma solidity ^0.6.0;
 
 
 
 
-contract LinkChildToken is
+
+
+contract LinkTokenChild is
   LinkToken,
-  ChildERC20CollateralLimited
+  ChildERC20Capped,
+  ChildERC20Collateralized
 {
 
   constructor(
     address childChainManager,
+    uint256 cap,
     address proofOfReservesFeedAddr
-  ) public ChildERC20CollateralLimited(childChainManager, proofOfReservesFeedAddr) {
-    _setupContractId("LinkChildToken");
+  )
+    public
+    ChildERC20(childChainManager)
+    ChildERC20Capped(cap)
+    ChildERC20Collateralized(proofOfReservesFeedAddr)
+  {
+    _setupContractId("LinkTokenChild");
   }
 
   function _onCreate()
@@ -1674,6 +1729,26 @@ contract LinkChildToken is
     override
   {
     // Do not mint any tokens on deployment, start with total supply of 0
+  }
+
+  /**
+   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   *
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  function _isDepositAllowed(address user, bytes memory depositData)
+    internal
+    override(ChildERC20Capped, ChildERC20Collateralized)
+    virtual
+    returns (bool, string memory)
+  {
+    (bool allowed, string memory message) = ChildERC20Capped._isDepositAllowed(user, depositData);
+    if (!allowed) {
+      return (allowed, message);
+    }
+
+    return ChildERC20Collateralized._isDepositAllowed(user, depositData);
   }
 
   /**

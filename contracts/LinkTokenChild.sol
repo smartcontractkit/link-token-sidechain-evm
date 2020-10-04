@@ -2,18 +2,27 @@ pragma solidity ^0.6.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {LinkToken} from "link_token/contracts/v0.6/LinkToken.sol";
-import {ChildERC20CollateralLimited} from "./child/ChildERC20CollateralLimited.sol";
+import {ChildERC20} from "./child/ChildERC20.sol";
+import {ChildERC20Capped} from "./child/ChildERC20Capped.sol";
+import {ChildERC20Collateralized} from "./child/ChildERC20Collateralized.sol";
 
-contract LinkChildToken is
+contract LinkTokenChild is
   LinkToken,
-  ChildERC20CollateralLimited
+  ChildERC20Capped,
+  ChildERC20Collateralized
 {
 
   constructor(
     address childChainManager,
+    uint256 cap,
     address proofOfReservesFeedAddr
-  ) public ChildERC20CollateralLimited(childChainManager, proofOfReservesFeedAddr) {
-    _setupContractId("LinkChildToken");
+  )
+    public
+    ChildERC20(childChainManager)
+    ChildERC20Capped(cap)
+    ChildERC20Collateralized(proofOfReservesFeedAddr)
+  {
+    _setupContractId("LinkTokenChild");
   }
 
   function _onCreate()
@@ -21,6 +30,26 @@ contract LinkChildToken is
     override
   {
     // Do not mint any tokens on deployment, start with total supply of 0
+  }
+
+  /**
+   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   *
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  function _isDepositAllowed(address user, bytes memory depositData)
+    internal
+    override(ChildERC20Capped, ChildERC20Collateralized)
+    virtual
+    returns (bool, string memory)
+  {
+    (bool allowed, string memory message) = ChildERC20Capped._isDepositAllowed(user, depositData);
+    if (!allowed) {
+      return (allowed, message);
+    }
+
+    return ChildERC20Collateralized._isDepositAllowed(user, depositData);
   }
 
   /**
