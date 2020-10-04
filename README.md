@@ -6,7 +6,7 @@ The total supply of the token is 0 (at deployment), and each token is divisible 
 
 To prevent accidental burns, the token does not allow transfers to the contract itself and to 0x0.
 
-**To bridge Link Token on Sidechains, `ChildLinkToken` implements additional `deposit` and `withdraw` methods to be used by the bridge operator.**
+**To bridge Link Token on Sidechains, `LinkTokenChild` implements additional `deposit` and `withdraw` methods to be used by the bridge operator.**
 
 ## Details
 
@@ -402,4 +402,4 @@ yarn test --network maticDevelopment
 yarn migrate:development
 ```
 
-This will migrate the `ChildLinkToken` contract to your locally deployed instance of Ganache blockchain.
+This will migrate the `LinkTokenChild` contract to your locally deployed instance of Ganache blockchain.

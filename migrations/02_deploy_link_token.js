@@ -1,5 +1,5 @@
 const axios = require('axios')
-const LinkToken = artifacts.require('LinkChildToken')
+const LinkToken = artifacts.require('LinkTokenChild')
 const { MockV3Aggregator } = require('@chainlink/contracts/truffle/v0.6/MockV3Aggregator')
 MockV3Aggregator.setProvider(web3.currentProvider)
 
@@ -59,9 +59,10 @@ module.exports = async (deployer, network, accounts) => {
     process.env.PROOF_OF_RESERVES_FEED ||
     (await getMockedProofOfReservesFeed(deployer, accounts)) ||
     (await getProofOfReservesFeed(network))
+  const cap = process.env.CHILD_ERC20_CAP || 0 // Will fail for 0, cap must be set
 
   console.log(`Setting 'childChainManager': ${childChainManager}`)
   console.log(`Setting 'proofOfReservesFeedAddr': ${proofOfReservesFeedAddr}`)
   const options = { from: accounts[0] }
-  await deployer.deploy(LinkToken, childChainManager, proofOfReservesFeedAddr, options)
+  await deployer.deploy(LinkToken, childChainManager, cap, proofOfReservesFeedAddr, options)
 }
