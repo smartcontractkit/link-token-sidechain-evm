@@ -1,40 +1,4 @@
 
-// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
-
-pragma solidity >=0.6.0;
-
-interface AggregatorV3Interface {
-
-  function decimals() external view returns (uint8);
-  function description() external view returns (string memory);
-  function version() external view returns (uint256);
-
-  // getRoundData and latestRoundData should both raise "No data present"
-  // if they do not have data to report, instead of returning unset values
-  // which could be misinterpreted as actual reported values.
-  function getRoundData(uint80 _roundId)
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-  function latestRoundData()
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-
-}
-
 // File: @openzeppelin/contracts/GSN/Context.sol
 
 // SPDX-License-Identifier: MIT
@@ -949,12 +913,64 @@ contract LinkToken is LinkERC20, ERC677Token {
   }
 }
 
-// File: contracts/child/IChildToken.sol
+// File: @chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol
+
+pragma solidity >=0.6.0;
+
+interface AggregatorV3Interface {
+
+  function decimals() external view returns (uint8);
+  function description() external view returns (string memory);
+  function version() external view returns (uint256);
+
+  // getRoundData and latestRoundData should both raise "No data present"
+  // if they do not have data to report, instead of returning unset values
+  // which could be misinterpreted as actual reported values.
+  function getRoundData(uint80 _roundId)
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+  function latestRoundData()
+    external
+    view
+    returns (
+      uint80 roundId,
+      int256 answer,
+      uint256 startedAt,
+      uint256 updatedAt,
+      uint80 answeredInRound
+    );
+
+}
+
+// File: contracts/interfaces/IChildERC20.sol
 
 pragma solidity ^0.6.0;
 
-interface IChildToken {
+interface IChildERC20 {
   function deposit(address user, bytes calldata depositData) external;
+  function withdraw(uint256 amount) external;
+}
+
+// File: contracts/interfaces/IChildERC20Recoverable.sol
+
+pragma solidity ^0.6.0;
+
+
+interface IChildERC20Recoverable is IChildERC20 {
+  function redeposit(address user) external;
+  function withdrawFailedDeposit(uint256 amount) external;
+
+  /**
+   * @dev Emitted when token deposit is not allowed.
+   */
+  event FailedDeposit(address indexed user, bytes depositData, string indexed message);
 }
 
 // File: @openzeppelin/contracts/utils/EnumerableSet.sol
@@ -1442,59 +1458,24 @@ contract AccessControlMixin is AccessControl {
   }
 }
 
-// File: contracts/ChildLinkToken.sol
+// File: contracts/child/ChildERC20.sol
 
 pragma solidity ^0.6.0;
 
 
 
 
-
-contract ChildLinkToken is
-  LinkToken,
-  IChildToken,
+abstract contract ChildERC20 is
+  ERC20,
+  IChildERC20,
   AccessControlMixin
 {
   bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
-  AggregatorV3Interface public proofOfReservesFeed;
 
-  constructor(
-    address childChainManager,
-    address proofOfReservesFeedAddr
-  ) public LinkToken() {
-    _setupContractId("ChildLinkToken");
+  constructor(address childChainManager) public {
+    _setupContractId("ChildERC20");
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
     _setupRole(DEPOSITOR_ROLE, childChainManager);
-    // Set the Proof of Reserves feed contract
-    proofOfReservesFeed = AggregatorV3Interface(proofOfReservesFeedAddr);
-  }
-
-  /**
-   * @dev Throws if called with amout that would make the child token undercollateralized.
-   * @param depositData abi encoded amount
-   */
-  modifier onlyWithProof(bytes memory depositData) {
-    (
-      /* uint80 roundId */,
-      int256 answer,
-      /* uint256 startedAt */,
-      /* uint256 updatedAt */,
-      /* uint80 answeredInRound */
-    ) = proofOfReservesFeed.latestRoundData();
-
-    uint256 amount = abi.decode(depositData, (uint256));
-    require(
-      totalSupply().add(amount) <= uint(answer),
-      "ChildLinkToken: insufficient reserves"
-    );
-    _;
-  }
-
-  function _onCreate()
-    internal
-    override
-  {
-    // Do not mint any tokens on deployment, start with total supply of 0
   }
 
   /**
@@ -1508,8 +1489,8 @@ contract ChildLinkToken is
   function deposit(address user, bytes calldata depositData)
     external
     override
+    virtual
     only(DEPOSITOR_ROLE)
-    onlyWithProof(depositData)
   {
     uint256 amount = abi.decode(depositData, (uint256));
     _mint(user, amount);
@@ -1522,7 +1503,219 @@ contract ChildLinkToken is
    */
   function withdraw(uint256 amount)
     external
+    override
+    virtual
   {
     _burn(_msgSender(), amount);
+  }
+}
+
+// File: contracts/child/ChildERC20Recoverable.sol
+
+pragma solidity ^0.6.0;
+
+
+
+
+abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
+
+  mapping (address => bytes) private _failedDeposits;
+
+  constructor(
+    address childChainManager
+  ) public ChildERC20(childChainManager) {
+    _setupContractId("ChildERC20Recoverable");
+  }
+
+  /**
+   * @dev Throws if this deposit is not allowed.
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  modifier onlyAllowedDeposits(address user, bytes memory depositData) {
+    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
+    require(allowed, message);
+    _;
+  }
+
+  /**
+   * @notice called when token is deposited on root chain
+   * @dev Should be callable only by ChildChainManager
+   * Should handle deposit by minting the required amount for user
+   * Make sure minting is done only by this function
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  function deposit(address user, bytes calldata depositData)
+    external
+    override(IChildERC20, ChildERC20)
+  {
+    uint256 amount = abi.decode(depositData, (uint256));
+
+    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
+    if (!allowed) {
+      uint256 failedDepositsAmount = abi.decode(_failedDeposits[user], (uint256));
+      _failedDeposits[user] = abi.encode(failedDepositsAmount.add(amount));
+
+      // Emit an event and exit
+      emit FailedDeposit(user, depositData, message);
+      return;
+    }
+
+    // If deposit is allowed mint the tokens
+    _mint(user, amount);
+  }
+
+  /**
+   * @dev Redeposit failed deposits for user.
+   *
+   * @param user user address for whom deposit is being done
+   */
+  function redeposit(address user)
+    external
+    override
+    onlyAllowedDeposits(user, _failedDeposits[user])
+  {
+    uint256 amount = abi.decode(_failedDeposits[user], (uint256));
+    _mint(user, amount);
+  }
+
+  /**
+   * @dev Withdraw failed deposits for user.
+   *
+   * @param amount amount of failed deposits to withdraw
+   */
+  function withdrawFailedDeposit(uint256 amount)
+    external
+    override
+  {
+    uint256 failedDepositsAmount = abi.decode(_failedDeposits[_msgSender()], (uint256));
+    uint256 newFailedDepositsAmount = failedDepositsAmount.sub(amount, "ChildERC20Recoverable: withdraw amount exceeds failed deposits");
+    _failedDeposits[_msgSender()] = abi.encode(newFailedDepositsAmount);
+
+    // Mint and immediately burn tokens so they can be unlocked on the origin chain
+    _mint(_msgSender(), amount);
+    _burn(_msgSender(), amount);
+  }
+
+  /**
+   * @dev Condition that is checked before any deposits of tokens.
+   *
+   * Returns a boolean value indicating whether the deposit is allowed.
+   * If not allowed, a reason string will also be returned.
+   *
+   * @param user user address for whom deposit is being done
+   * @param depositData abi encoded amount
+   */
+  function _isDepositAllowed(address user, bytes memory depositData) internal virtual returns (bool, string memory) { }
+}
+
+// File: contracts/child/ChildERC20CollateralLimited.sol
+
+pragma solidity ^0.6.0;
+
+
+
+abstract contract ChildERC20CollateralLimited is ChildERC20Recoverable {
+
+  AggregatorV3Interface public proofOfReservesFeed;
+
+  constructor(
+    address childChainManager,
+    address proofOfReservesFeedAddr
+  ) public ChildERC20Recoverable(childChainManager) {
+    _setupContractId("ChildERC20CollateralLimited");
+    // Set the Proof of Reserves feed contract
+    proofOfReservesFeed = AggregatorV3Interface(proofOfReservesFeedAddr);
+  }
+
+  /**
+   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   *
+   * @param depositData abi encoded amount
+   */
+  function _isDepositAllowed(address /* user */, bytes memory depositData) internal override virtual returns (bool, string memory) {
+    (
+      /* uint80 roundId */,
+      int256 answer,
+      /* uint256 startedAt */,
+      /* uint256 updatedAt */,
+      /* uint80 answeredInRound */
+    ) = proofOfReservesFeed.latestRoundData();
+
+    uint256 amount = abi.decode(depositData, (uint256));
+    bool allowed = totalSupply().add(amount) <= uint256(answer);
+    string memory message = allowed ? "" : "ChildERC20CollateralLimited: insufficient reserves";
+    return (allowed, message);
+  }
+}
+
+// File: contracts/LinkChildToken.sol
+
+pragma solidity ^0.6.0;
+
+
+
+
+contract LinkChildToken is
+  LinkToken,
+  ChildERC20CollateralLimited
+{
+
+  constructor(
+    address childChainManager,
+    address proofOfReservesFeedAddr
+  ) public ChildERC20CollateralLimited(childChainManager, proofOfReservesFeedAddr) {
+    _setupContractId("LinkChildToken");
+  }
+
+  function _onCreate()
+    internal
+    override
+  {
+    // Do not mint any tokens on deployment, start with total supply of 0
+  }
+
+  /**
+   * @dev Moves tokens `amount` from `sender` to `recipient`.
+   *
+   * This is internal function is equivalent to {transfer}, and can be used to
+   * e.g. implement automatic token fees, slashing mechanisms, etc.
+   *
+   * Emits a {Transfer} event.
+   *
+   * Requirements:
+   *
+   * - `sender` cannot be the zero address.
+   * - `recipient` cannot be the zero address.
+   * - `sender` must have a balance of at least `amount`.
+   */
+  function _transfer(address sender, address recipient, uint256 amount)
+    internal
+    override(ERC20, LinkToken)
+    virtual
+  {
+    LinkToken._transfer(sender, recipient, amount);
+  }
+
+  /**
+   * @dev Sets `amount` as the allowance of `spender` over the `owner`s tokens.
+   *
+   * This is internal function is equivalent to `approve`, and can be used to
+   * e.g. set automatic allowances for certain subsystems, etc.
+   *
+   * Emits an {Approval} event.
+   *
+   * Requirements:
+   *
+   * - `owner` cannot be the zero address.
+   * - `spender` cannot be the zero address.
+   */
+  function _approve(address owner, address spender, uint256 amount)
+    internal
+    override(ERC20, LinkToken)
+    virtual
+  {
+    LinkToken._approve(owner, spender, amount);
   }
 }
