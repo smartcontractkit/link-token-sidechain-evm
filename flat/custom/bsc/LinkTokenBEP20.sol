@@ -721,6 +721,140 @@ contract ERC20 is Context, IERC20 {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+// File: @openzeppelin/contracts/token/ERC20/ERC20Burnable.sol
+
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.6.0;
+
+
+
+/**
+ * @dev Extension of {ERC20} that allows token holders to destroy both their own
+ * tokens and those that they have an allowance for, in a way that can be
+ * recognized off-chain (via event analysis).
+ */
+abstract contract ERC20Burnable is Context, ERC20 {
+    /**
+     * @dev Destroys `amount` tokens from the caller.
+     *
+     * See {ERC20-_burn}.
+     */
+    function burn(uint256 amount) public virtual {
+        _burn(_msgSender(), amount);
+    }
+
+    /**
+     * @dev Destroys `amount` tokens from `account`, deducting from the caller's
+     * allowance.
+     *
+     * See {ERC20-_burn} and {ERC20-allowance}.
+     *
+     * Requirements:
+     *
+     * - the caller must have allowance for ``accounts``'s tokens of at least
+     * `amount`.
+     */
+    function burnFrom(address account, uint256 amount) public virtual {
+        uint256 decreasedAllowance = allowance(account, _msgSender()).sub(amount, "ERC20: burn amount exceeds allowance");
+
+        _approve(account, _msgSender(), decreasedAllowance);
+        _burn(account, amount);
+    }
+}
+
+// File: @openzeppelin/contracts/utils/Pausable.sol
+
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.6.0;
+
+
+/**
+ * @dev Contract module which allows children to implement an emergency stop
+ * mechanism that can be triggered by an authorized account.
+ *
+ * This module is used through inheritance. It will make available the
+ * modifiers `whenNotPaused` and `whenPaused`, which can be applied to
+ * the functions of your contract. Note that they will not be pausable by
+ * simply including this module, only once the modifiers are put in place.
+ */
+contract Pausable is Context {
+    /**
+     * @dev Emitted when the pause is triggered by `account`.
+     */
+    event Paused(address account);
+
+    /**
+     * @dev Emitted when the pause is lifted by `account`.
+     */
+    event Unpaused(address account);
+
+    bool private _paused;
+
+    /**
+     * @dev Initializes the contract in unpaused state.
+     */
+    constructor () internal {
+        _paused = false;
+    }
+
+    /**
+     * @dev Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    modifier whenNotPaused() {
+        require(!_paused, "Pausable: paused");
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    modifier whenPaused() {
+        require(_paused, "Pausable: not paused");
+        _;
+    }
+
+    /**
+     * @dev Triggers stopped state.
+     *
+     * Requirements:
+     *
+     * - The contract must not be paused.
+     */
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    /**
+     * @dev Returns to normal state.
+     *
+     * Requirements:
+     *
+     * - The contract must be paused.
+     */
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+}
+
 // File: link_token/contracts/v0.6/token/LinkERC20.sol
 
 pragma solidity ^0.6.0;
@@ -1486,17 +1620,6 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
   mapping (address => bytes) private _failedDeposits;
 
   /**
-   * @dev Throws if this deposit is not allowed.
-   * @param user user address for whom deposit is being done
-   * @param depositData abi encoded amount
-   */
-  modifier onlyAllowedDeposits(address user, bytes memory depositData) {
-    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
-    require(allowed, message);
-    _;
-  }
-
-  /**
    * @notice called when token is deposited on root chain
    * @dev Should be callable only by ChildChainManager
    * Should handle deposit by minting the required amount for user
@@ -1532,9 +1655,14 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
   function redeposit(address user)
     external
     override
-    onlyAllowedDeposits(user, _failedDeposits[user])
   {
-    uint256 amount = abi.decode(_failedDeposits[user], (uint256));
+    bytes memory depositData = _failedDeposits[user];
+    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
+    require(allowed, message);
+    delete _failedDeposits[user];
+
+    // Allowed to deposit
+    uint256 amount = abi.decode(depositData, (uint256));
     _mint(user, amount);
   }
 
@@ -1602,7 +1730,7 @@ abstract contract ChildERC20Capped is ChildERC20Recoverable {
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param depositData abi encoded amount
    */
@@ -1671,7 +1799,7 @@ abstract contract ChildERC20Collateralized is ChildERC20Recoverable {
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param depositData abi encoded amount
    */
@@ -1732,7 +1860,7 @@ contract LinkTokenChild is
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param user user address for whom deposit is being done
    * @param depositData abi encoded amount
@@ -1816,7 +1944,15 @@ pragma solidity ^0.6.0;
 
 
 
-contract LinkTokenBEP20 is BEP20, LinkTokenChild {
+
+
+/**
+ * @dev {ERC20Burnable} feature is requested by the Binance team to support
+ * integrations with projects that support portfolio assets and may ask users
+ * to burn LINK as to mint some new token.
+ */
+contract LinkTokenBEP20 is BEP20, ERC20Burnable, Pausable, LinkTokenChild {
+  bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
   constructor(
     address childChainManager,
@@ -1827,6 +1963,19 @@ contract LinkTokenBEP20 is BEP20, LinkTokenChild {
     LinkTokenChild(childChainManager, cap, proofOfReservesFeedAddr)
   {
     _setupContractId("LinkTokenBEP20");
+    _setupRole(PAUSER_ROLE, _msgSender());
+
+    /**
+     * @notice The contract starts in a paused state which disables withdrawals. As Binance
+     * controls the bridge, the tokens are not moved to Ethereum by withdrawing (burning) but
+     * by transferring to a specific address in Binance control. This tx should be set up using
+     * the Binance bridge UI, and on success, withdrawn tokens will be deposited by Binance
+     * on Ethereum Mainnet.
+     *
+     * If this is to change in the future, there is a possibility left open for the contract
+     * to be unpaused (once) which will enable the withdraw function from then on.
+     */
+    _pause();
   }
 
   /**
@@ -1834,6 +1983,32 @@ contract LinkTokenBEP20 is BEP20, LinkTokenChild {
    */
   function getOwner() override external view returns (address) {
     return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
+  }
+
+  /**
+   * @dev Should burn user's tokens.
+   *
+   * See {ChildERC20-withdraw}.
+   */
+  function withdraw(uint256 amount)
+    external
+    override
+    whenNotPaused
+  {
+    _burn(_msgSender(), amount);
+  }
+
+  /**
+   * @dev Unpauses all token withdraws.
+   *
+   * See {ERC20Pausable} and {Pausable-_unpause}.
+   *
+   * Requirements:
+   *
+   * - the caller must have the `PAUSER_ROLE`.
+   */
+  function unpause() public only(PAUSER_ROLE) {
+    _unpause();
   }
 
   /**
