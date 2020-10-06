@@ -13,7 +13,7 @@ abstract contract ChildERC20Collateralized is ChildERC20Recoverable {
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param depositData abi encoded amount
    */
