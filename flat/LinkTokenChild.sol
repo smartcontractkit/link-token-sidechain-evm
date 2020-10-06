@@ -1486,17 +1486,6 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
   mapping (address => bytes) private _failedDeposits;
 
   /**
-   * @dev Throws if this deposit is not allowed.
-   * @param user user address for whom deposit is being done
-   * @param depositData abi encoded amount
-   */
-  modifier onlyAllowedDeposits(address user, bytes memory depositData) {
-    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
-    require(allowed, message);
-    _;
-  }
-
-  /**
    * @notice called when token is deposited on root chain
    * @dev Should be callable only by ChildChainManager
    * Should handle deposit by minting the required amount for user
@@ -1532,9 +1521,14 @@ abstract contract ChildERC20Recoverable is ChildERC20, IChildERC20Recoverable {
   function redeposit(address user)
     external
     override
-    onlyAllowedDeposits(user, _failedDeposits[user])
   {
-    uint256 amount = abi.decode(_failedDeposits[user], (uint256));
+    bytes memory depositData = _failedDeposits[user];
+    (bool allowed, string memory message) = _isDepositAllowed(user, depositData);
+    require(allowed, message);
+    delete _failedDeposits[user];
+
+    // Allowed to deposit
+    uint256 amount = abi.decode(depositData, (uint256));
     _mint(user, amount);
   }
 
@@ -1602,7 +1596,7 @@ abstract contract ChildERC20Capped is ChildERC20Recoverable {
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param depositData abi encoded amount
    */
@@ -1671,7 +1665,7 @@ abstract contract ChildERC20Collateralized is ChildERC20Recoverable {
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param depositData abi encoded amount
    */
@@ -1732,7 +1726,7 @@ contract LinkTokenChild is
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param user user address for whom deposit is being done
    * @param depositData abi encoded amount

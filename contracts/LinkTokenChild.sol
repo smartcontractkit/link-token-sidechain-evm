@@ -33,7 +33,7 @@ contract LinkTokenChild is
   }
 
   /**
-   * @dev Does not allow if called with amout that would make the child token undercollateralized.
+   * @dev Does not allow if called with amount that would make the child token undercollateralized.
    *
    * @param user user address for whom deposit is being done
    * @param depositData abi encoded amount
